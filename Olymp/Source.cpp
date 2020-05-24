@@ -15,16 +15,24 @@ bool cmin(int &a, int &b) {
 	return false;
 }
 
+int gcd(int a, int b) {
+	while (a != 0 && b != 0) {
+		if (a > b) {
+			a = a % b;
+		}
+		else b = b % a;
+	}
+	return a + b;
+}
+
 struct SegTree {
-	vector<int> d;
-	vector<int> flag;
+	vector<pair<int, int>> d;
 	int SZ = 1;
 
 	SegTree(vector<int> &a) {
 		int n = a.size();
 		while (SZ < n) SZ *= 2;
 		d.resize(SZ * 2);
-		flag.resize(SZ * 2, 0);
 		build(0, 0, SZ, a);
 	}
 
@@ -32,99 +40,58 @@ struct SegTree {
 		cout << "\n";
 		for (int i = 0; i < SZ; i++)
 		{
-			cout << i << " " << d[i] << "\n";
+			cout << i << " = { " << d[i].first << " " << d[i].second << " }\n";
 		}
 		cout << "\n";
 	}
 
 	void build(int v, int l, int r, const vector<int> &a) {
 		if (r - l == 1) {
-			if (l < a.size()) d[v] = a[l];
-			else d[v] = 0;
+			if (l < a.size()) d[v] = { a[l], 1 };
+			else d[v] = { 0, 1 };
 			return;
 		}
 		int m = (r + l) / 2;
 		build(v * 2 + 1, l, m, a);
 		build(v * 2 + 2, m, r, a);
-		d[v] = d[v * 2 + 1] + d[v * 2 + 2];
+		if (d[v * 2 + 1].first == d[v * 2 + 2].first) {
+			d[v] = { d[v * 2 + 1].first, d[v * 2 + 1].second + d[v * 2 + 2].second };
+		} else d[v] = (d[v * 2 + 1].first > d[v * 2 + 2].first ? d[v * 2 + 1] : d[v * 2 + 2]);
 	}
 
-	int query(int ql, int qr, int v, int l, int r) {
-		push(v, l, r);
-		if (qr <= l || r <= ql) return 0;
-		if (ql <= l && r <= qr)	return d[v];
+	pair<int, int> query(int ql, int qr, int v, int l, int r) {
+		if (qr <= l || r <= ql) return { -1000, -1 };
+		if (ql <= l && r <= qr) return d[v];
 		int m = (r + l) / 2;
-		int p1 = query(ql, qr, v * 2 + 1, l, m);
-		int p2 = query(ql, qr, v * 2 + 2, m, r);
-		return p1 + p2;
-	}
-
-	void push(int v, int l, int r) {
-		d[v] = d[v] + (r - l) * flag[v];
-		if (r - l == 1) {
-			flag[v] = 0;
-			return;
+		pair<int, int> p1 = query(ql, qr, v * 2 + 1, l, m);
+		pair<int, int> p2 = query(ql, qr, v * 2 + 2, m, r);
+		if (p1.first == p2.first) {
+			return { p1.first, p1.second + p2.second };
 		}
-		flag[v * 2 + 1] += flag[v];
-		flag[v * 2 + 2] += flag[v];
-		flag[v] = 0;
+		else return (p1.first > p2.first ? p1 : p2);
 	}
 
-	void update(int x, int dx, int v, int l, int r) {
-		push(v, l, r);
-		if (x < l || x >= r) return;
-		if (r - l == 1) {
-			d[v] += dx;
-			return;
-		}
-		int m = (r + l) / 2;
-		update(x, dx, v * 2 + 1, l, m);
-		update(x, dx, v * 2 + 2, m, r);
-		d[v] = d[v * 2 + 1] + d[v * 2 + 2];
-	}
-
-	void update(int ql, int qr, int dx, int v, int l, int r) {
-		push(v, l, r);
-		if (qr <= l || r <= ql) return;
-		if (ql <= l && r <= qr) {
-			flag[v] += dx;
-			push(v, l, r);
-			return;
-		}
-		int m = (r + l) / 2;
-		update(ql, qr, dx, v * 2 + 1, l, m);
-		update(ql, qr, dx, v * 2 + 2, m, r);
-		d[v] = d[v * 2 + 1] + d[v * 2 + 2];
-	}
-
-	void update(int x, int dx) {
-		update(x, dx, 0, 0, SZ);
-	}
-
-	void update(int ql, int qr, int dx) {
-		update(ql, qr, dx, 0, 0, SZ);
-	}
-
-	int query(int ql, int qr) {
+	pair<int, int> query(int ql, int qr) {
 		return query(ql, qr, 0, 0, SZ);
 	}
 };
 
 int main() {
-	int n, a, b;
+	int n, a, b, d;
+	char c;
 	cin >> n;
 	vector<int> vect(n, 0);
+	for (int i = 0; i < n; i++)
+	{
+		cin >> vect[i];
+	}
 	SegTree st(vect);
 	cin >> n;
-	while(n != 0) {
+	for (int i = 0; i < n; i++) {
 		cin >> a >> b;
-		if (n == 1) {
-			st.update(a - 1, b);
-		}
-		else if (n == 2) {
-			cout << st.query(a - 1, b) << "\n";
-		}
-		cin >> n;
+		//st.print();
+		pair<int, int> ans = st.query(a - 1, b);
+		cout << ans.first << " " << ans.second << "\n";
 	}
 	cin >> n;
 	return 0;
